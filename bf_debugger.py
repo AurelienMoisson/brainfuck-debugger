@@ -125,12 +125,33 @@ def interactive_mode(stdscr, code_name, input_name, mem_size, delay, mem_colors 
               'c':curses.color_pair(5),
               'y':curses.color_pair(6)}
 
+    def get_char(k):
+        char = chr(k).__repr__().strip("'")[-2:]
+        char = ' '*(len(char)==1) + char
+        return char
+    mem_prints_functions = {
+        'x': lambda k: hex(k)[-2:].replace('x', ' ').upper(),
+        'c': lambda k: get_char(k)
+        }
+    global mem_print_type
+    mem_print_type = []
+
     height, width = stdscr.getmaxyx()
     if (input_name != None):
         input_file = open(input_name, 'rb')
     else:
         input_file = None
     program = Interpret(code_name, mem_size, lambda : input_file.read(1))
+    def get_input():
+        global mem_print_type
+        k = program.head_pos
+        if k >= len(mem_print_type):
+            mem_print_type += ['x'] * (k-len(mem_print_type)-1)
+            mem_print_type += ['c']
+        else:
+            mem_print_type[k] = 'c'
+        return input_file.read(1)
+    program.get_input = get_input
     block_width = 2
     if width <= 2*block_width+2:
         raise StandardError("terminal too thin for interactive mode")
@@ -144,7 +165,6 @@ def interactive_mode(stdscr, code_name, input_name, mem_size, delay, mem_colors 
     mem_pad = curses.newpad(mem_height, mem_width)
     terminal_height = max(5, height-mem_height)
     code_pad = curses.newpad(code_height, code_width)
-    hexa = lambda k: hex(k)[-2:].replace('x', ' ').upper()
     
     for l,line in enumerate(program.lines):
         if l == program.pos[0]:
@@ -156,35 +176,33 @@ def interactive_mode(stdscr, code_name, input_name, mem_size, delay, mem_colors 
         else:
             code_pad.addstr(l,0,line)
     
-    def redraw_mem():
-        for k in range(mem_size):
+    def redraw_mem(start = 0, end = -1):
+        for k in range(start%mem_size, end%mem_size):
             l, c = divmod(k, mem_col)
             c *= block_width +1
             if k < len(mem_colors):
                 color = colors[mem_colors[k]]
             else:
                 color = colors['w']
-            if k == program.head_pos:
-                mem_pad.addstr(l, c, hexa(program.data[k]), color + curses.A_REVERSE)
+            to_print = ''
+            if k < len(mem_print_type):
+                to_print = mem_prints_functions[mem_print_type[k]](program.data[k])
             else:
-                mem_pad.addstr(l, c, hexa(program.data[k]), color)
+                to_print = mem_prints_functions['x'](program.data[k])
+            if k == program.head_pos:
+                mem_pad.addstr(l, c, to_print, color + curses.A_REVERSE)
+            else:
+                mem_pad.addstr(l, c, to_print, color)
     
     redraw_mem()
 
     last_pos = program.pos[:]
     last_head_pos = program.head_pos
+
+
     while True:
-        for k in [last_head_pos, program.head_pos]:
-            l, c = divmod(k, mem_col)
-            c *= block_width + 1
-            if k < len(mem_colors):
-                color = colors[mem_colors[k]]
-            else:
-                color = colors['w']
-            if k == program.head_pos:
-                mem_pad.addstr(l, c, hexa(program.data[k]), color + curses.A_REVERSE)
-            else:
-                mem_pad.addstr(l, c, hexa(program.data[k]), color)
+        redraw_mem(last_head_pos, last_head_pos+1)
+        redraw_mem(program.head_pos, program.head_pos+1)
 
         code_pad.addstr(last_pos[0], last_pos[1], program.lines[last_pos[0]][last_pos[1]])
         code_pad.addstr(program.pos[0], program.pos[1], program.lines[program.pos[0]][program.pos[1]], curses.A_REVERSE)
