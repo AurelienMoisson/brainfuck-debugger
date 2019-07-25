@@ -117,7 +117,10 @@ def interactive_mode(stdscr, code_name, input_name, mem_size, delay, mem_colors 
               'y':curses.color_pair(6)}
 
     height, width = stdscr.getmaxyx()
-    input_file = open(input_name, 'rb')
+    if (input_name != None):
+        input_file = open(input_name, 'rb')
+    else:
+        input_file = None
     program = Interpret(code_name, mem_size, lambda : input_file.read(1))
     block_width = 2
     if width <= 2*block_width+2:
@@ -217,7 +220,9 @@ def interactive_mode(stdscr, code_name, input_name, mem_size, delay, mem_colors 
 
 mem_size = 65536
 delay = 0
-if len(sys.argv)>3:
+if len(sys.argv) > 3:
     curses.wrapper(interactive_mode, sys.argv[1], sys.argv[2], mem_size, delay, sys.argv[3].strip('\'"').split(' '))
-else:
+elif len(sys.argv) > 2:
     curses.wrapper(interactive_mode, sys.argv[1], sys.argv[2], mem_size, delay)
+else:
+    curses.wrapper(interactive_mode, sys.argv[1], None, mem_size, delay)
