@@ -158,13 +158,15 @@ def interactive_mode(stdscr, code_name, input_name, mem_size, delay, mem_colors 
 
     code_width = max(len(l) for l in program.lines)
     code_height = len(program.lines)
-    mem_width = max(width/2, width-code_width)
+    mem_width = max(width/2, width-code_width-2)
     mem_col = max(1,int(mem_width/(block_width+1)))
     mem_width = mem_col*(block_width+1)-1
     mem_height = ceil(mem_size/mem_col)
     mem_pad = curses.newpad(mem_height, mem_width)
     terminal_height = max(5, height-mem_height)
     code_pad = curses.newpad(code_height, code_width)
+    term_pad = curses.newpad(1000, mem_width)
+    term_pad_end_l = 1
     
     for l,line in enumerate(program.lines):
         if l == program.pos[0]:
@@ -213,6 +215,11 @@ def interactive_mode(stdscr, code_name, input_name, mem_size, delay, mem_colors 
 
         mem_pad_start_l = max(0, min(mem_height-(height-terminal_height), program.head_pos//mem_col-(height-terminal_height)//2))
         mem_pad.noutrefresh(mem_pad_start_l,0, terminal_height, width-mem_width, height-1, width-1)
+
+        term_pad.addstr(0,0,program.out)
+        term_pad_start_l = max(0, term_pad.getyx()[0] - terminal_height)
+        term_pad.noutrefresh(term_pad_start_l, 0, 0, width-mem_width, terminal_height-1, width-1)
+
         curses.doupdate()
         last_pos = program.pos[:]
         last_head_pos = program.head_pos
