@@ -87,6 +87,15 @@ class Interpret:
         while len(self.loop_starts) >= depth:
             self.step()
 
+    def run_loop(self):
+        depth = len(self.loop_starts)
+        if depth == 0:
+            return
+        while len(self.loop_starts) >= depth:
+            self.step()
+            if len(self.loop_starts) == depth and self.lines[self.pos[0]][self.pos[1]] == ']':
+                return
+
     def get_output(self):
         out = self.out
         self.out = ""
@@ -207,6 +216,9 @@ def interactive_mode(stdscr, code_name, input_name, mem_size, delay, mem_colors 
                     program.step()
                 except EOFError:
                     return
+            redraw_mem()
+        elif k == "\n":
+            program.run_loop()
             redraw_mem()
         else:
             try:
